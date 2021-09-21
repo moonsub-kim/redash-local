@@ -1,4 +1,4 @@
 ```
-make init-redash
-make up-redash
+make init
+make up
 ```

@@ -1,6 +1,6 @@
-init-redash:
+init:
 	docker-compose run --rm server create_db 
 
-up-redash:
+up:
 	docker-compose up
 
