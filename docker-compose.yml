@@ -76,7 +76,7 @@ services:
     restart: always
 
 networks:
-  redash:
-    external:
-      name: redash
+  default:
+    external: true
+    name: redash
 
