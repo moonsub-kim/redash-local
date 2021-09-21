@@ -1,0 +1,82 @@
+version: "3.9"
+
+x-redash-service: &redash-service
+  image: redash/redash:preview
+  depends_on:
+    - postgres
+    - redis
+  # env_file: /opt/redash/env
+  restart: always
+
+services:
+  server:
+    <<: *redash-service
+    command: server
+    ports:
+      - "5000:5000"
+    environment:
+      REDASH_REDIS_URL: "redis://redash-redis:6379"
+      REDASH_DATABASE_URL: "postgresql://redash:redash@redash-postgres"
+      REDASH_WEB_WORKERS: 4
+
+  scheduler:
+    <<: *redash-service
+    command: scheduler
+    environment:
+      REDASH_REDIS_URL: "redis://redash-redis:6379"
+      REDASH_DATABASE_URL: "postgresql://redash:redash@redash-postgres"
+      QUEUES: "celery"
+      WORKERS_COUNT: 1
+
+  scheduled_worker:
+    <<: *redash-service
+    command: worker
+    environment:
+      REDASH_REDIS_URL: "redis://redash-redis:6379"
+      REDASH_DATABASE_URL: "postgresql://redash:redash@redash-postgres"
+      QUEUES: "scheduled_queries,schemas"
+      WORKERS_COUNT: 1
+
+  adhoc_worker:
+    <<: *redash-service
+    command: worker
+    environment:
+      REDASH_REDIS_URL: "redis://redash-redis:6379"
+      REDASH_DATABASE_URL: "postgresql://redash:redash@redash-postgres"
+      QUEUES: "queries,celery,schemas,default,periodic"
+      WORKERS_COUNT: 2
+
+  redis:
+    image: redis:5.0-alpine
+    container_name: redash-redis
+    restart: always
+
+  postgres:
+    image: postgres:9.6-alpine
+    container_name: redash-postgres
+    # env_file: /opt/redash/env
+    volumes:
+      - /var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: redash
+      POSTGRES_USER: redash
+      POSTGRES_PASSWORD: redash
+    restart: always
+
+  nginx:
+    image: redash/nginx:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    links:
+      - server:redash
+    restart: always
+
+networks:
+  redash:
+    external:
+      name: redash
+
